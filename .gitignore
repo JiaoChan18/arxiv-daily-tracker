@@ -84,3 +84,17 @@ logs/
 # OS
 .DS_Store
 Thumbs.db
+
+# Generated daily reports
+output/
+
+# Runtime logs (this project uses log/, not logs/)
+log/
+
+# Claude Code local agent state
+.claude/
+
+# One-off helper / smoke-test scripts (not part of the shipped pipeline)
+test_api.py
+test_api_2.py
+fix_and_convert.py

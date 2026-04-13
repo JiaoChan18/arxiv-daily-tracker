@@ -1,0 +1,21 @@
+arxiv:
+  categories: [quant-ph]
+  max_results: null          # null = 全部抓取，不设上限
+
+llm:
+  model: glm-4-flash
+  max_retries: 3
+
+schedule:
+  time: "08:00"
+  timezone: "Europe/Copenhagen"
+
+output:
+  directory: ./output
+  formats: [markdown, pdf]
+
+email:
+  enabled: true
+  smtp_host: smtp.gmail.com
+  smtp_port: 465
+  recipients: [jinminghe2047@gmail.com]
