@@ -10,6 +10,7 @@ main.py — arXiv Daily Tracker 的 CLI 入口。
 
 import argparse
 import logging
+import os
 import sys
 import time
 from datetime import date, datetime, timedelta
@@ -230,6 +231,7 @@ def main() -> None:
 
     # PDF 生成失败时降级为发送 Markdown
     attachment_path = md_path
+    pdf_path = None
     if "pdf" in config["output"]["formats"]:
         logger.info("Step 3/4（续）：生成 PDF...")
         pdf_path = pdf_exporter.export(md_path)
@@ -238,21 +240,36 @@ def main() -> None:
         else:
             logger.warning("PDF 生成失败，将改为发送 Markdown 文件")
 
-    # ── Step 4：发送邮件 ──────────────────────────────────────────────────
+    # ── Step 4：通知 ──────────────────────────────────────────────────────
+    # NOTIFY_MODE 控制通知方式：
+    #   obsidian（默认）— 跳过邮件，Git 同步由工作流负责
+    #   email           — 发送邮件（PDF + Markdown 双附件）
+    #   both            — 同上；工作流同时执行 Git 同步
+    notify_mode = os.environ.get("NOTIFY_MODE", "obsidian").strip().lower()
+
     if args.no_email:
         logger.info("Step 4/4：--no-email 模式，跳过邮件发送")
         logger.info(f"报告已保存至：{attachment_path}")
     elif not email_cfg.get("enabled", True):
         logger.info("Step 4/4：config.yaml 中 email.enabled=false，跳过邮件发送")
-    else:
-        logger.info("Step 4/4：发送邮件...")
+    elif notify_mode in ("email", "both"):
+        logger.info(f"Step 4/4：NOTIFY_MODE={notify_mode}，发送邮件...")
+        # 构建附件列表：PDF（若已生成）+ Markdown
+        attachment_paths: list[Path] = []
+        if pdf_path:
+            attachment_paths.append(pdf_path)
+        attachment_paths.append(md_path)
         send(
-            attachment_path=attachment_path,
+            attachment_paths=attachment_paths,
             target_date=target_date,
             smtp_host=email_cfg["smtp_host"],
             smtp_port=email_cfg["smtp_port"],
             recipients=email_cfg["recipients"],
         )
+    else:
+        # notify_mode == "obsidian"（默认）
+        logger.info("Step 4/4：NOTIFY_MODE=obsidian，跳过邮件发送（Git 同步在工作流中进行）")
+        logger.info(f"报告已保存至：{attachment_path}")
 
     logger.info("全部流程完成。")
 

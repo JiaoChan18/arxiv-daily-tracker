@@ -9,7 +9,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   run:
@@ -28,14 +28,17 @@ jobs:
 
       - name: Install system packages for pandoc + xelatex (CJK)
         # Package set mandated by renderer/pdf_exporter.py for Chinese PDF rendering.
+        # texlive-latex-recommended + lmodern provide lmodern.sty required by xelatex.
         run: |
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends \
             pandoc \
             texlive-xetex \
+            texlive-latex-recommended \
             texlive-lang-chinese \
             texlive-science \
-            fonts-noto-cjk
+            fonts-noto-cjk \
+            lmodern
 
       - name: Install Python dependencies
         run: pip install -r requirements.txt
@@ -45,7 +48,28 @@ jobs:
           ZHIPU_API_KEY: ${{ secrets.ZHIPU_API_KEY }}
           GMAIL_ADDRESS: ${{ secrets.GMAIL_ADDRESS }}
           GMAIL_APP_PASSWORD: ${{ secrets.GMAIL_APP_PASSWORD }}
+          # Set NOTIFY_MODE in GitHub → Settings → Variables → Actions to switch modes.
+          # obsidian (default): skip email, rely on vault/ Git sync below.
+          # email or both: also send PDF + Markdown via Gmail.
+          NOTIFY_MODE: ${{ vars.NOTIFY_MODE || 'obsidian' }}
         run: python main.py
+
+      - name: Sync Markdown reports to vault/
+        # Copy generated .md files into vault/ so Obsidian (Git-backed) picks them up.
+        # output/YYYY-MM-DD/quant-ph-YYYY-MM-DD.md → vault/YYYY-MM-DD/quant-ph-YYYY-MM-DD.md
+        run: |
+          find output -name "*.md" | while IFS= read -r f; do
+            rel="${f#output/}"
+            dest="vault/${rel}"
+            mkdir -p "$(dirname "$dest")"
+            cp "$f" "$dest"
+          done
+
+      - name: Auto-commit vault changes
+        uses: stefanzweifel/git-auto-commit-action@v5
+        with:
+          commit_message: "docs: add daily arXiv report (${{ github.run_id }})"
+          file_pattern: vault/**
 
       - name: Upload output directory
         if: always()

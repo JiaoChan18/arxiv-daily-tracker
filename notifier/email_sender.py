@@ -23,22 +23,22 @@ SMTP_TIMEOUT = 30  # 秒
 
 
 def send(
-    attachment_path: Path,
+    attachment_paths: list[Path],
     target_date: date,
     smtp_host: str,
     smtp_port: int,
     recipients: list[str],
 ) -> None:
     """
-    发送每日报告邮件，附件为 PDF 或 Markdown 文件。
+    发送每日报告邮件，支持同时附加多个文件（如 PDF + Markdown）。
     发送失败时记录错误并调用 sys.exit(1)，使调度器能感知失败。
 
     Args:
-        attachment_path: 附件文件路径（PDF 优先，Markdown 备选）。
-        target_date:     报告日期，用于邮件主题。
-        smtp_host:       SMTP 服务器地址。
-        smtp_port:       SMTP 端口（465 = SSL）。
-        recipients:      收件人邮箱列表。
+        attachment_paths: 附件文件路径列表（PDF 在前，Markdown 备选或附加）。
+        target_date:      报告日期，用于邮件主题。
+        smtp_host:        SMTP 服务器地址。
+        smtp_port:        SMTP 端口（465 = SSL）。
+        recipients:       收件人邮箱列表。
     """
     gmail_address = os.environ["GMAIL_ADDRESS"]
     app_password = os.environ["GMAIL_APP_PASSWORD"]
@@ -47,7 +47,7 @@ def send(
     body = (
         f"您好，\n\n"
         f"附件为 {target_date.isoformat()} 的 arXiv quant-ph 论文日报。\n\n"
-        f"共收录 {_count_papers(attachment_path)} 篇论文，标题及摘要已翻译为中文。\n\n"
+        f"共收录 {_count_papers(attachment_paths[0])} 篇论文，标题及摘要已翻译为中文。\n\n"
         f"— arXiv Daily Tracker"
     )
 
@@ -57,10 +57,11 @@ def send(
     msg["Subject"] = subject
     msg.attach(MIMEText(body, "plain", "utf-8"))
 
-    # 添加附件
-    _attach_file(msg, attachment_path)
+    # 依次添加所有附件
+    for path in attachment_paths:
+        _attach_file(msg, path)
 
-    logger.info(f"正在发送邮件至 {recipients}，附件：{attachment_path.name}")
+    logger.info(f"正在发送邮件至 {recipients}，附件：{[p.name for p in attachment_paths]}")
 
     try:
         with smtplib.SMTP_SSL(smtp_host, smtp_port, timeout=SMTP_TIMEOUT) as server:
