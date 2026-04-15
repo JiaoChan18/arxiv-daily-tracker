@@ -2,9 +2,10 @@ name: Daily arXiv Tracker
 
 on:
   schedule:
-    # Daily at UTC 00:00 (= Beijing 08:00). GitHub cron is best-effort and
-    # may drift by several minutes under load.
-    - cron: '0 0 * * *'
+    # Daily at UTC 01:00 — stable across CET/CEST (DST). arXiv listing is
+    # complete well before this fires. GitHub cron is best-effort and may
+    # drift by several minutes under load.
+    - cron: '0 1 * * *'
   workflow_dispatch:
 
 permissions:
