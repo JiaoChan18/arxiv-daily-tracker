@@ -11,6 +11,7 @@ main.py — arXiv Daily Tracker 的 CLI 入口。
 import argparse
 import logging
 import sys
+import time
 from datetime import date, datetime, timedelta
 from pathlib import Path
 from zoneinfo import ZoneInfo
@@ -220,6 +221,8 @@ def main() -> None:
         except Exception as e:
             # 单篇失败不中断流程，translate_paper 内部已做回退，此处仅记录
             logger.warning(f"论文 {paper.arxiv_id} 翻译异常（已回退到英文）：{e}")
+        if i < len(papers):
+            time.sleep(2)  # 每篇之间强制间隔 2s，避免密集请求触发智谱并发限制
 
     # ── Step 3：生成报告 ──────────────────────────────────────────────────
     logger.info("Step 3/4：生成 Markdown 报告...")

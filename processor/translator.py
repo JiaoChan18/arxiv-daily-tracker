@@ -26,7 +26,7 @@ from fetcher.arxiv_fetcher import Paper
 logger = logging.getLogger(__name__)
 
 ZHIPU_BASE_URL = "https://open.bigmodel.cn/api/paas/v4/"
-REQUEST_TIMEOUT = 30  # 秒
+REQUEST_TIMEOUT = 45  # 秒；适当延长，减少高负载下的误超时
 
 # System Prompt：以系统角色注入铁律约束，权重高于 user 消息。
 # 分隔符必须与 _parse_analysis_output() 中的 TAGS 保持一致。
@@ -97,7 +97,12 @@ def build_client(model: str, max_retries: int) -> tuple[OpenAI, str, int]:
         (client, model, max_retries) 三元组。
     """
     api_key = os.environ["ZHIPU_API_KEY"]
-    client = OpenAI(api_key=api_key, base_url=ZHIPU_BASE_URL)
+    client = OpenAI(
+        api_key=api_key,
+        base_url=ZHIPU_BASE_URL,
+        timeout=REQUEST_TIMEOUT,  # SDK 级 socket 超时，防止连接层无限挂起
+        max_retries=0,            # 禁用 SDK 内置重试，避免与手动指数退避叠加导致无限循环
+    )
     return client, model, max_retries
 
 
