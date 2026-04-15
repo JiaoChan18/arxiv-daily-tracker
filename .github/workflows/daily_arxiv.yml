@@ -37,6 +37,8 @@ jobs:
             texlive-latex-recommended \
             texlive-lang-chinese \
             texlive-science \
+            texlive-latex-extra \
+            texlive-fonts-extra \
             fonts-noto-cjk \
             lmodern
 
