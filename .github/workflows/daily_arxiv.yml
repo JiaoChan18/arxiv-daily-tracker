@@ -1,0 +1,56 @@
+name: Daily arXiv Tracker
+
+on:
+  schedule:
+    # Daily at UTC 00:00 (= Beijing 08:00). GitHub cron is best-effort and
+    # may drift by several minutes under load.
+    - cron: '0 0 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.10
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+          cache: 'pip'
+
+      - name: Install system packages for pandoc + xelatex (CJK)
+        # Package set mandated by renderer/pdf_exporter.py for Chinese PDF rendering.
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            pandoc \
+            texlive-xetex \
+            texlive-lang-chinese \
+            texlive-science \
+            fonts-noto-cjk
+
+      - name: Install Python dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run arXiv daily pipeline
+        env:
+          ZHIPU_API_KEY: ${{ secrets.ZHIPU_API_KEY }}
+          GMAIL_ADDRESS: ${{ secrets.GMAIL_ADDRESS }}
+          GMAIL_APP_PASSWORD: ${{ secrets.GMAIL_APP_PASSWORD }}
+        run: python main.py
+
+      - name: Upload output directory
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: arxiv-output-${{ github.run_id }}
+          path: output/
+          retention-days: 7
+          if-no-files-found: ignore
