@@ -49,14 +49,17 @@ jobs:
           GMAIL_ADDRESS: ${{ secrets.GMAIL_ADDRESS }}
           GMAIL_APP_PASSWORD: ${{ secrets.GMAIL_APP_PASSWORD }}
           # Set NOTIFY_MODE in GitHub → Settings → Variables → Actions to switch modes.
-          # obsidian (default): skip email, rely on vault/ Git sync below.
-          # email or both: also send PDF + Markdown via Gmail.
+          # obsidian (default): skip email, sync Markdown to vault/ via Git commit below.
+          # email:             send PDF + Markdown via Gmail; skip vault Git commit.
+          # both:              send email AND sync to vault/ via Git commit.
           NOTIFY_MODE: ${{ vars.NOTIFY_MODE || 'obsidian' }}
         run: python main.py
 
       - name: Sync Markdown reports to vault/
         # Copy generated .md files into vault/ so Obsidian (Git-backed) picks them up.
         # output/YYYY-MM-DD/quant-ph-YYYY-MM-DD.md → vault/YYYY-MM-DD/quant-ph-YYYY-MM-DD.md
+        # Skipped when NOTIFY_MODE=email to keep the repository clean.
+        if: vars.NOTIFY_MODE == 'obsidian' || vars.NOTIFY_MODE == 'both' || vars.NOTIFY_MODE == ''
         run: |
           find output -name "*.md" | while IFS= read -r f; do
             rel="${f#output/}"
@@ -66,6 +69,8 @@ jobs:
           done
 
       - name: Auto-commit vault changes
+        # Skipped when NOTIFY_MODE=email to keep the repository clean.
+        if: vars.NOTIFY_MODE == 'obsidian' || vars.NOTIFY_MODE == 'both' || vars.NOTIFY_MODE == ''
         uses: stefanzweifel/git-auto-commit-action@v5
         with:
           commit_message: "docs: add daily arXiv report (${{ github.run_id }})"
