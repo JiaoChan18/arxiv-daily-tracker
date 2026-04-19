@@ -15,6 +15,12 @@ jobs:
   run:
     runs-on: ubuntu-latest
     timeout-minutes: 120
+    env:
+      # Set NOTIFY_MODE in GitHub → Settings → Variables → Actions to switch modes.
+      # obsidian (default): sync Markdown to obsidian-cmrunner repo via Git push.
+      # email:             send PDF + Markdown via Gmail; skip vault sync.
+      # both:              send email AND sync to vault via Git push.
+      NOTIFY_MODE: ${{ vars.NOTIFY_MODE || 'obsidian' }}
 
     steps:
       - name: Checkout repository
@@ -48,33 +54,31 @@ jobs:
           ZHIPU_API_KEY: ${{ secrets.ZHIPU_API_KEY }}
           GMAIL_ADDRESS: ${{ secrets.GMAIL_ADDRESS }}
           GMAIL_APP_PASSWORD: ${{ secrets.GMAIL_APP_PASSWORD }}
-          # Set NOTIFY_MODE in GitHub → Settings → Variables → Actions to switch modes.
-          # obsidian (default): skip email, sync Markdown to vault/ via Git commit below.
-          # email:             send PDF + Markdown via Gmail; skip vault Git commit.
-          # both:              send email AND sync to vault/ via Git commit.
-          NOTIFY_MODE: ${{ vars.NOTIFY_MODE || 'obsidian' }}
         run: python main.py
 
-      - name: Sync Markdown reports to vault/
-        # Copy generated .md files into vault/ so Obsidian (Git-backed) picks them up.
-        # output/YYYY-MM-DD/quant-ph-YYYY-MM-DD.md → vault/YYYY-MM-DD/quant-ph-YYYY-MM-DD.md
-        # Skipped when NOTIFY_MODE=email to keep the repository clean.
-        if: vars.NOTIFY_MODE == 'obsidian' || vars.NOTIFY_MODE == 'both' || vars.NOTIFY_MODE == ''
-        run: |
-          find output -name "*.md" | while IFS= read -r f; do
-            rel="${f#output/}"
-            dest="vault/${rel}"
-            mkdir -p "$(dirname "$dest")"
-            cp "$f" "$dest"
-          done
-
-      - name: Auto-commit vault changes
-        # Skipped when NOTIFY_MODE=email to keep the repository clean.
-        if: vars.NOTIFY_MODE == 'obsidian' || vars.NOTIFY_MODE == 'both' || vars.NOTIFY_MODE == ''
-        uses: stefanzweifel/git-auto-commit-action@v5
+      - name: Checkout Obsidian Vault
+        if: contains(fromJSON('["obsidian", "both", ""]'), env.NOTIFY_MODE)
+        uses: actions/checkout@v4
         with:
-          commit_message: "docs: add daily arXiv report (${{ github.run_id }})"
-          file_pattern: vault/**
+          repository: cmwalker2048/obsidian-cmrunner
+          token: ${{ secrets.OBSIDIAN_SYNC_TOKEN }}
+          path: obsidian_vault
+
+      - name: Push to Obsidian Repo
+        if: contains(fromJSON('["obsidian", "both", ""]'), env.NOTIFY_MODE)
+        run: |
+          YEAR=$(date +'%Y')
+          DEST_DIR="obsidian_vault/50_Sync_git/arxiv/$YEAR"
+          mkdir -p "$DEST_DIR"
+          cp -r output/**/*.md "$DEST_DIR/" 2>/dev/null || cp output/*.md "$DEST_DIR/" || true
+          cd obsidian_vault
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add .
+          if ! git diff --quiet --staged; then
+            git commit -m "Auto-sync arXiv daily report for $YEAR"
+            git push
+          fi
 
       - name: Upload output directory
         if: always()
