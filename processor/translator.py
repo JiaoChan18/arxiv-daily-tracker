@@ -177,6 +177,19 @@ def _apply_marks(text: str, terms: list[str], *, case_insensitive: bool = False)
     return text
 
 
+def _strip_html(text: str) -> str:
+    """
+    移除文本中所有 HTML 标签及大模型可能产生的无意义碎片。
+
+    处理对象：
+    - 合法标签：<mark>、<s>、<font color="...">、<span>、<br> 等
+    - 模型幻觉碎片：<read ...>、<0x...> 等不完整/未知标签
+    - 仅移除标签本身，保留标签内的文本内容
+    """
+    # 匹配 <...> 形式的任意标签（含属性、自闭合），不贪婪以避免跨标签吞噬内容
+    return re.sub(r"<[^>]+>", "", text)
+
+
 def _parse_analysis_output(raw: str, fallback_abstract: str) -> tuple[str, str, str]:
     """
     从 LLM 结构化输出中提取 core_value、abstract_en_highlighted、abstract_zh 三段内容。
@@ -231,6 +244,11 @@ def _parse_analysis_output(raw: str, fallback_abstract: str) -> tuple[str, str, 
                 abstract_en = _apply_marks(abstract_en, en_terms, case_insensitive=True)
             if "**" not in abstract_zh:
                 abstract_zh = _apply_marks(abstract_zh, zh_terms, case_insensitive=False)
+
+    # 最终清洗：移除模型可能残留的任何 HTML 标签碎片
+    core_value  = _strip_html(core_value)
+    abstract_en = _strip_html(abstract_en)
+    abstract_zh = _strip_html(abstract_zh)
 
     return core_value, abstract_en, abstract_zh
 
