@@ -17,7 +17,7 @@ jobs:
     timeout-minutes: 120
     env:
       # Set NOTIFY_MODE in GitHub → Settings → Variables → Actions to switch modes.
-      # obsidian (default): sync Markdown to obsidian-cmrunner repo via Git push.
+      # obsidian (default): sync Markdown to Obsidian vault repo via Git push.
       # email:             send PDF + Markdown via SMTP; skip vault sync.
       # both:              send email AND sync to vault via Git push.
       NOTIFY_MODE: ${{ vars.NOTIFY_MODE || 'obsidian' }}

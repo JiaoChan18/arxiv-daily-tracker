@@ -9,7 +9,7 @@
 | 功能 | 说明 |
 |------|------|
 | **智谱 AI 提炼** | GLM-4-Flash 输出核心价值 + 高亮中英双语摘要，拒绝套话式总结 |
-| **Obsidian 同步** | 自动推送 Markdown 到 `obsidian-cmrunner` 仓库，按年份归档 |
+| **Obsidian 同步** | 自动推送 Markdown 到 Obsidian 知识库仓库，按年份归档 |
 | **邮件推送** | 支持 Gmail、Outlook、Yahoo 及任意 SMTP 服务器，SSL/STARTTLS/无加密三种模式 |
 | **智能归档** | 按年份分类存入 `arxiv/YYYY/`，标题即文件名 |
 | **多模态通知** | 支持 `obsidian` / `email` / `both` 三种模式自由切换 |
@@ -144,7 +144,7 @@ output/YYYY-MM-DD/
 | `ZHIPU_API_KEY` | 智谱 AI API 密钥 |
 | `SMTP_USERNAME` | SMTP 邮箱地址（发件人） |
 | `SMTP_PASSWORD` | SMTP 密码或 App Password |
-| `OBSIDIAN_SYNC_TOKEN` | 推送到 obsidian-cmrunner 仓库的 GitHub PAT |
+| `OBSIDIAN_SYNC_TOKEN` | 推送到 Obsidian 知识库仓库的 GitHub PAT |
 
 ### 可选的 Repository Variables
 
