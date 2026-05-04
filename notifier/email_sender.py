@@ -1,7 +1,12 @@
 """
-email_sender.py — 通过 Gmail SMTP 发送每日论文报告（PDF 或 Markdown 附件）。
+email_sender.py — 通过 SMTP 发送每日论文报告（PDF 或 Markdown 附件）。
 
-使用 Gmail App Password（非账号密码）认证，通过 SSL 加密连接（端口 465）。
+支持多种邮件服务商（Gmail、Outlook、Yahoo 及自定义 SMTP 服务器）。
+通过环境变量 SMTP_USERNAME / SMTP_PASSWORD 认证，
+兼容旧版 GMAIL_ADDRESS / GMAIL_APP_PASSWORD（已弃用，会输出警告）。
+连接方式支持 SSL（端口 465）、STARTTLS（端口 587）及无加密三种模式，
+由 config.yaml 中的 smtp_security 字段控制。
+
 若 PDF 不可用，自动降级为发送 Markdown 文件。
 发送失败时记录错误并以非零状态码退出，便于 cron 或调度器检测。
 """
@@ -22,11 +27,75 @@ logger = logging.getLogger(__name__)
 SMTP_TIMEOUT = 30  # 秒
 
 
+def _get_credentials() -> tuple[str, str]:
+    """
+    从环境变量获取 SMTP 凭据。
+    优先使用 SMTP_USERNAME / SMTP_PASSWORD，
+    若未设置则回退到已弃用的 GMAIL_ADDRESS / GMAIL_APP_PASSWORD。
+
+    Returns:
+        (username, password) 元组。
+
+    Raises:
+        KeyError: 两组环境变量均未设置时抛出。
+    """
+    username = os.environ.get("SMTP_USERNAME")
+    password = os.environ.get("SMTP_PASSWORD")
+
+    if username and password:
+        return username, password
+
+    # 回退到已弃用的 Gmail 变量
+    legacy_user = os.environ.get("GMAIL_ADDRESS")
+    legacy_pass = os.environ.get("GMAIL_APP_PASSWORD")
+
+    if legacy_user and legacy_pass:
+        logger.warning(
+            "GMAIL_ADDRESS / GMAIL_APP_PASSWORD 已弃用，请改用 SMTP_USERNAME / SMTP_PASSWORD。"
+        )
+        return legacy_user, legacy_pass
+
+    raise KeyError(
+        "未找到 SMTP 凭据。请设置环境变量 SMTP_USERNAME 和 SMTP_PASSWORD"
+        "（或已弃用的 GMAIL_ADDRESS 和 GMAIL_APP_PASSWORD）。"
+    )
+
+
+def _connect(
+    smtp_host: str, smtp_port: int, smtp_security: str
+) -> smtplib.SMTP | smtplib.SMTP_SSL:
+    """
+    根据安全模式建立 SMTP 连接。
+
+    Args:
+        smtp_host:     SMTP 服务器地址。
+        smtp_port:     SMTP 端口。
+        smtp_security: 安全模式，可选 "ssl"、"starttls"、"none"。
+
+    Returns:
+        已连接的 SMTP 或 SMTP_SSL 对象。
+    """
+    if smtp_security == "ssl":
+        server = smtplib.SMTP_SSL(smtp_host, smtp_port, timeout=SMTP_TIMEOUT)
+    elif smtp_security == "starttls":
+        server = smtplib.SMTP(smtp_host, smtp_port, timeout=SMTP_TIMEOUT)
+        server.starttls()
+    elif smtp_security == "none":
+        server = smtplib.SMTP(smtp_host, smtp_port, timeout=SMTP_TIMEOUT)
+    else:
+        raise ValueError(
+            f"不支持的 smtp_security 值：'{smtp_security}'，"
+            "请使用 'ssl'、'starttls' 或 'none'。"
+        )
+    return server
+
+
 def send(
     attachment_paths: list[Path],
     target_date: date,
     smtp_host: str,
     smtp_port: int,
+    smtp_security: str,
     recipients: list[str],
 ) -> None:
     """
@@ -37,11 +106,11 @@ def send(
         attachment_paths: 附件文件路径列表（PDF 在前，Markdown 备选或附加）。
         target_date:      报告日期，用于邮件主题。
         smtp_host:        SMTP 服务器地址。
-        smtp_port:        SMTP 端口（465 = SSL）。
+        smtp_port:        SMTP 端口（465 = SSL，587 = STARTTLS）。
+        smtp_security:    安全模式："ssl"、"starttls" 或 "none"。
         recipients:       收件人邮箱列表。
     """
-    gmail_address = os.environ["GMAIL_ADDRESS"]
-    app_password = os.environ["GMAIL_APP_PASSWORD"]
+    username, password = _get_credentials()
 
     subject = f"arXiv quant-ph 每日速递 — {target_date.isoformat()}"
     body = (
@@ -52,7 +121,7 @@ def send(
     )
 
     msg = MIMEMultipart()
-    msg["From"] = gmail_address
+    msg["From"] = username
     msg["To"] = ", ".join(recipients)
     msg["Subject"] = subject
     msg.attach(MIMEText(body, "plain", "utf-8"))
@@ -64,14 +133,18 @@ def send(
     logger.info(f"正在发送邮件至 {recipients}，附件：{[p.name for p in attachment_paths]}")
 
     try:
-        with smtplib.SMTP_SSL(smtp_host, smtp_port, timeout=SMTP_TIMEOUT) as server:
-            server.login(gmail_address, app_password)
-            server.sendmail(gmail_address, recipients, msg.as_string())
+        with _connect(smtp_host, smtp_port, smtp_security) as server:
+            server.login(username, password)
+            server.sendmail(username, recipients, msg.as_string())
 
         logger.info("邮件发送成功")
 
     except smtplib.SMTPAuthenticationError:
-        logger.error("Gmail 认证失败。请检查 GMAIL_ADDRESS 和 GMAIL_APP_PASSWORD 是否正确。")
+        logger.error(
+            f"SMTP 认证失败（{smtp_host}）。"
+            "请检查 SMTP_USERNAME 和 SMTP_PASSWORD 是否正确，"
+            "并确认已为所用邮箱开启 SMTP 访问权限（如 Gmail 需使用 App Password）。"
+        )
         sys.exit(1)
     except smtplib.SMTPException as e:
         logger.error(f"SMTP 发送失败：{e}")
@@ -83,12 +156,16 @@ def send(
 
 def _attach_file(msg: MIMEMultipart, file_path: Path) -> None:
     """
-    将文件作为附件添加到邮件消息中。
+    将文件作为附件添加到邮件消息中。文件不存在时记录警告并跳过，不抛出异常。
 
     Args:
         msg:       MIMEMultipart 邮件对象。
         file_path: 要附加的文件路径。
     """
+    if not file_path.exists():
+        logger.warning(f"附件文件不存在，跳过：{file_path}")
+        return
+
     with open(file_path, "rb") as f:
         part = MIMEBase("application", "octet-stream")
         part.set_payload(f.read())

@@ -28,6 +28,9 @@ from renderer import markdown_writer, pdf_exporter
 _ET = ZoneInfo("America/New_York")
 _ARXIV_ANNOUNCE_HOUR_ET = 20  # arXiv 每天约 20:00 ET 发布新文章
 
+# 设为 True 可重新启用 PDF 生成（需同步恢复 config.yaml 中的 pdf 格式及工作流中的 LaTeX 安装步骤）
+ENABLE_PDF = False
+
 
 def _prev_business_day(d: date) -> date:
     """
@@ -232,13 +235,18 @@ def main() -> None:
     # PDF 生成失败时降级为发送 Markdown
     attachment_path = md_path
     pdf_path = None
-    if "pdf" in config["output"]["formats"]:
+    if ENABLE_PDF and "pdf" in config["output"]["formats"]:
         logger.info("Step 3/4（续）：生成 PDF...")
-        pdf_path = pdf_exporter.export(md_path)
+        try:
+            pdf_path = pdf_exporter.export(md_path)
+        except Exception as e:
+            logger.warning(f"PDF 生成异常，跳过（{e}）")
         if pdf_path:
             attachment_path = pdf_path
         else:
             logger.warning("PDF 生成失败，将改为发送 Markdown 文件")
+    else:
+        logger.info("Step 3/4（续）：PDF 已禁用，仅生成 Markdown")
 
     # ── Step 4：通知 ──────────────────────────────────────────────────────
     # NOTIFY_MODE 控制通知方式：
@@ -264,6 +272,7 @@ def main() -> None:
             target_date=target_date,
             smtp_host=email_cfg["smtp_host"],
             smtp_port=email_cfg["smtp_port"],
+            smtp_security=email_cfg.get("smtp_security", "ssl"),
             recipients=email_cfg["recipients"],
         )
     else:

@@ -12,10 +12,11 @@ schedule:
 
 output:
   directory: ./output
-  formats: [markdown, pdf]
+  formats: [markdown]
 
 email:
   enabled: true
   smtp_host: smtp.gmail.com
   smtp_port: 465
+  smtp_security: ssl             # ssl | starttls | none
   recipients: [jinminghe2047@gmail.com]

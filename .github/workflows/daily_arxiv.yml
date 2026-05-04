@@ -18,7 +18,7 @@ jobs:
     env:
       # Set NOTIFY_MODE in GitHub → Settings → Variables → Actions to switch modes.
       # obsidian (default): sync Markdown to obsidian-cmrunner repo via Git push.
-      # email:             send PDF + Markdown via Gmail; skip vault sync.
+      # email:             send PDF + Markdown via SMTP; skip vault sync.
       # both:              send email AND sync to vault via Git push.
       NOTIFY_MODE: ${{ vars.NOTIFY_MODE || 'obsidian' }}
 
@@ -32,19 +32,19 @@ jobs:
           python-version: '3.10'
           cache: 'pip'
 
-      - name: Install system packages for pandoc + xelatex (CJK)
-        # Package set mandated by renderer/pdf_exporter.py for Chinese PDF rendering.
-        # texlive-latex-recommended + lmodern provide lmodern.sty required by xelatex.
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y --no-install-recommends \
-            pandoc \
-            texlive-xetex \
-            texlive-latex-recommended \
-            texlive-lang-chinese \
-            texlive-science \
-            fonts-noto-cjk \
-            lmodern
+      # PDF generation is temporarily disabled; re-enable this step and restore
+      # "pdf" to config.yaml output.formats when PDF output is needed again.
+      # - name: Install system packages for pandoc + xelatex (CJK)
+      #   run: |
+      #     sudo apt-get update
+      #     sudo apt-get install -y --no-install-recommends \
+      #       pandoc \
+      #       texlive-xetex \
+      #       texlive-latex-recommended \
+      #       texlive-lang-chinese \
+      #       texlive-science \
+      #       fonts-noto-cjk \
+      #       lmodern
 
       - name: Install Python dependencies
         run: pip install -r requirements.txt
@@ -52,8 +52,8 @@ jobs:
       - name: Run arXiv daily pipeline
         env:
           ZHIPU_API_KEY: ${{ secrets.ZHIPU_API_KEY }}
-          GMAIL_ADDRESS: ${{ secrets.GMAIL_ADDRESS }}
-          GMAIL_APP_PASSWORD: ${{ secrets.GMAIL_APP_PASSWORD }}
+          SMTP_USERNAME: ${{ secrets.SMTP_USERNAME }}
+          SMTP_PASSWORD: ${{ secrets.SMTP_PASSWORD }}
         run: python main.py
 
       - name: Checkout Obsidian Vault
