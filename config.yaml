@@ -3,7 +3,7 @@ arxiv:
   # 抓取论文数量上限；null = 全部抓取，不设上限
   # 设为整数（如 10）可限制每天处理的论文数量，适合测试或节省 API 调用
   # 命令行 --max-results 会覆盖此值
-  max_results: null
+  max_results: 1
 
 llm:
   model: glm-4-flash
@@ -19,7 +19,7 @@ output:
 
 email:
   enabled: true
-  smtp_host: smtp.gmail.com
+  smtp_host: smtp.mail.ustc.edu.cn
   smtp_port: 465
   smtp_security: ssl             # ssl | starttls | none
   # 收件人列表；可通过环境变量 SMTP_RECIPIENTS（逗号分隔）覆盖
