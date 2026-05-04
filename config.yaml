@@ -19,7 +19,7 @@ output:
 
 email:
   enabled: true
-  smtp_host: smtp.mail.ustc.edu.cn
+  smtp_host: mail.ustc.edu.cn
   smtp_port: 465
   smtp_security: ssl             # ssl | starttls | none
   # 收件人列表；可通过环境变量 SMTP_RECIPIENTS（逗号分隔）覆盖
