@@ -60,7 +60,7 @@ jobs:
         if: contains(fromJSON('["obsidian", "both", ""]'), env.NOTIFY_MODE)
         uses: actions/checkout@v4
         with:
-          repository: cmwalker2048/obsidian-cmrunner
+          repository: ${{ vars.OBSIDIAN_VAULT_REPO }}
           token: ${{ secrets.OBSIDIAN_SYNC_TOKEN }}
           path: obsidian_vault
 
