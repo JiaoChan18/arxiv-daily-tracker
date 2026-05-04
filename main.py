@@ -25,6 +25,8 @@ from notifier.email_sender import send
 from processor.translator import build_client, translate_paper
 from renderer import markdown_writer, pdf_exporter
 
+__version__ = "1.0.0"
+
 _ET = ZoneInfo("America/New_York")
 _ARXIV_ANNOUNCE_HOUR_ET = 20  # arXiv 每天约 20:00 ET 发布新文章
 
@@ -106,6 +108,11 @@ def parse_args() -> argparse.Namespace:
     """解析命令行参数。"""
     parser = argparse.ArgumentParser(
         description="arXiv Daily Tracker — 每日论文抓取、翻译、报告生成与邮件推送"
+    )
+    parser.add_argument(
+        "--version",
+        action="version",
+        version=f"%(prog)s {__version__}",
     )
     parser.add_argument(
         "--date",
