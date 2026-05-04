@@ -19,4 +19,5 @@ email:
   smtp_host: smtp.gmail.com
   smtp_port: 465
   smtp_security: ssl             # ssl | starttls | none
-  recipients: [jinminghe2047@gmail.com]
+  # 收件人列表；可通过环境变量 SMTP_RECIPIENTS（逗号分隔）覆盖
+  recipients: []

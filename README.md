@@ -89,6 +89,7 @@ ZHIPU_API_KEY=your_zhipu_api_key_here
 # SMTP 邮箱凭据（支持任意邮件服务商）
 SMTP_USERNAME=you@gmail.com
 SMTP_PASSWORD=xxxx xxxx xxxx xxxx
+SMTP_RECIPIENTS=recipient@example.com
 
 # 通知模式：obsidian | email | both
 NOTIFY_MODE=obsidian
@@ -144,6 +145,7 @@ output/YYYY-MM-DD/
 | `ZHIPU_API_KEY` | 智谱 AI API 密钥 |
 | `SMTP_USERNAME` | SMTP 邮箱地址（发件人） |
 | `SMTP_PASSWORD` | SMTP 密码或 App Password |
+| `SMTP_RECIPIENTS` | 收件人邮箱（多个用逗号分隔），覆盖 config.yaml 中的 recipients |
 | `OBSIDIAN_SYNC_TOKEN` | 推送到 Obsidian 知识库仓库的 GitHub PAT |
 
 ### 可选的 Repository Variables

@@ -32,6 +32,23 @@ _ARXIV_ANNOUNCE_HOUR_ET = 20  # arXiv 每天约 20:00 ET 发布新文章
 ENABLE_PDF = False
 
 
+def _get_recipients(email_cfg: dict) -> list[str]:
+    """
+    获取收件人列表。优先读取环境变量 SMTP_RECIPIENTS（逗号分隔），
+    若未设置则使用 config.yaml 中的 email.recipients。
+
+    Args:
+        email_cfg: config.yaml 中的 email 配置段。
+
+    Returns:
+        收件人邮箱列表。
+    """
+    env_val = os.environ.get("SMTP_RECIPIENTS", "").strip()
+    if env_val:
+        return [addr.strip() for addr in env_val.split(",") if addr.strip()]
+    return email_cfg.get("recipients", [])
+
+
 def _prev_business_day(d: date) -> date:
     """
     返回 d 的前一个工作日（跳过周六、周日）。
@@ -273,7 +290,7 @@ def main() -> None:
             smtp_host=email_cfg["smtp_host"],
             smtp_port=email_cfg["smtp_port"],
             smtp_security=email_cfg.get("smtp_security", "ssl"),
-            recipients=email_cfg["recipients"],
+            recipients=_get_recipients(email_cfg),
         )
     else:
         # notify_mode == "obsidian"（默认）

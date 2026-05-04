@@ -54,6 +54,7 @@ jobs:
           ZHIPU_API_KEY: ${{ secrets.ZHIPU_API_KEY }}
           SMTP_USERNAME: ${{ secrets.SMTP_USERNAME }}
           SMTP_PASSWORD: ${{ secrets.SMTP_PASSWORD }}
+          SMTP_RECIPIENTS: ${{ secrets.SMTP_RECIPIENTS }}
         run: python main.py
 
       - name: Checkout Obsidian Vault
