@@ -25,7 +25,7 @@ from notifier.email_sender import send
 from processor.translator import build_client, translate_paper
 from renderer import markdown_writer, pdf_exporter
 
-__version__ = "1.0.0"
+__version__ = "1.0.1"
 
 _ET = ZoneInfo("America/New_York")
 _ARXIV_ANNOUNCE_HOUR_ET = 20  # arXiv 每天约 20:00 ET 发布新文章
