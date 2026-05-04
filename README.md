@@ -151,8 +151,9 @@ output/YYYY-MM-DD/
 | Variable 名称 | 默认值 | 说明 |
 |---------------|--------|------|
 | `NOTIFY_MODE` | `obsidian` | 通知模式：`obsidian` / `email` / `both` |
+| `OBSIDIAN_VAULT_REPO` | — | Obsidian 知识库仓库全名（如 `user/repo`），用于 CI 推送同步 |
 
-> **迁移提示**：如果你之前使用的是 `GMAIL_ADDRESS` / `GMAIL_APP_PASSWORD`，请在 GitHub 仓库的 Settings > Secrets and variables > Actions 中将它们重命名为 `SMTP_USERNAME` / `SMTP_PASSWORD`。
+> **迁移提示**：如果你之前使用的是 `GMAIL_ADDRESS` / `GMAIL_APP_PASSWORD`，请在 GitHub 仓库的 Settings > Secrets and variables > Actions 中将它们重命名为 `SMTP_USERNAME` / `SMTP_PASSWORD`。同时请添加 Repository Variable `OBSIDIAN_VAULT_REPO`，值为你的 Obsidian 知识库仓库全名（如 `user/repo`）。
 
 ---
 
