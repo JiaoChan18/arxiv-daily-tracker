@@ -167,15 +167,16 @@ def _parse_rss_entry(entry: feedparser.FeedParserDict) -> Paper | None:
         return None
 
 
-def _fetch_via_rss(category: str) -> list[Paper]:
+def _fetch_via_rss(category: str, max_results: int | None = None) -> list[Paper]:
     """
-    RSS 引擎：抓取 arXiv 当日公告的全部"新提交"论文。
+    RSS 引擎：抓取 arXiv 当日公告的"新提交"论文。
 
     RSS Feed 与网站 New Submissions 完全同步，单次请求返回当日所有条目，
     无需分页，也无需指定日期（始终返回最新批次）。
 
     Args:
-        category: arXiv 分类标识，如 'quant-ph'。
+        category:    arXiv 分类标识，如 'quant-ph'。
+        max_results: 返回论文数量上限；None 表示不限制。
 
     Returns:
         announce_type 为 "new" 的 Paper 列表。
@@ -197,6 +198,10 @@ def _fetch_via_rss(category: str) -> list[Paper]:
         paper = _parse_rss_entry(entry)
         if paper:
             papers.append(paper)
+
+    if max_results is not None and max_results > 0:
+        papers = papers[:max_results]
+        logger.info(f"[RSS 引擎] max_results={max_results}，截断后返回 {len(papers)} 篇")
 
     return papers
 
@@ -236,7 +241,7 @@ def _parse_atom_entry(entry: feedparser.FeedParserDict) -> Paper | None:
         return None
 
 
-def _fetch_via_search_api(target_date: date, category: str) -> list[Paper]:
+def _fetch_via_search_api(target_date: date, category: str, max_results: int | None = None) -> list[Paper]:
     """
     Search API 引擎：通过 submittedDate 时间窗口抓取指定历史日期的论文。
 
@@ -246,6 +251,7 @@ def _fetch_via_search_api(target_date: date, category: str) -> list[Paper]:
     Args:
         target_date: 目标历史日期。
         category:    arXiv 分类标识。
+        max_results: 返回论文数量上限；None 表示不限制。
 
     Returns:
         指定日期提交的 Paper 列表。
@@ -289,6 +295,12 @@ def _fetch_via_search_api(target_date: date, category: str) -> list[Paper]:
             if paper:
                 papers.append(paper)
 
+        # 若已达到 max_results，提前停止翻页
+        if max_results is not None and len(papers) >= max_results:
+            papers = papers[:max_results]
+            logger.info(f"[Search API 引擎] 已达 max_results={max_results}，停止翻页")
+            break
+
         # 若本页结果少于页面大小，说明已是最后一页
         if len(entries) < SEARCH_PAGE_SIZE:
             break
@@ -307,6 +319,7 @@ def fetch_papers(
     target_date: date | str,
     category: str = "quant-ph",
     latest_date: date | None = None,
+    max_results: int | None = None,
 ) -> list[Paper]:
     """
     混合抓取器入口：根据 target_date 与 latest_date 的关系自动选择引擎。
@@ -321,6 +334,7 @@ def fetch_papers(
         latest_date:  最新业务日期（由 main.py 的 get_arxiv_latest_date() 计算后
                       传入）。若为 None，则将 target_date 视为历史日期并走
                       Search API 引擎（保守策略，不在此模块重复计算 ET 时区逻辑）。
+        max_results:  返回论文数量上限；None 表示不限制（配置中的 null）。
 
     Returns:
         Paper 列表；若无结果则返回空列表。
@@ -335,10 +349,10 @@ def fetch_papers(
 
     if use_rss:
         logger.info(f"[Hybrid Fetcher] 使用 RSS 引擎（当日批次 {target_date}）")
-        papers = _fetch_via_rss(category)
+        papers = _fetch_via_rss(category, max_results=max_results)
     else:
         logger.info(f"[Hybrid Fetcher] 使用 Search API 引擎（历史日期 {target_date}）")
-        papers = _fetch_via_search_api(target_date, category)
+        papers = _fetch_via_search_api(target_date, category, max_results=max_results)
 
     logger.info(f"[Hybrid Fetcher] 共抓取 {len(papers)} 篇 {category} 论文（{target_date}）")
     return papers

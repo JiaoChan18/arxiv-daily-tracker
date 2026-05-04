@@ -126,6 +126,12 @@ def parse_args() -> argparse.Namespace:
         help="跳过邮件发送（干运行模式）",
     )
     parser.add_argument(
+        "--max-results",
+        type=int,
+        default=None,
+        help="抓取论文数量上限（覆盖 config.yaml 中的 max_results；默认不限制）",
+    )
+    parser.add_argument(
         "--verbose",
         action="store_true",
         help="开启 DEBUG 级别日志",
@@ -182,6 +188,8 @@ def main() -> None:
 
     # 读取配置项
     category = config["arxiv"]["categories"][0]
+    # max_results：CLI --max-results 优先，否则读 config.yaml（null 表示不限制）
+    max_results = args.max_results if args.max_results is not None else config["arxiv"].get("max_results")
     output_dir = Path(config["output"]["directory"])
     llm_cfg = config["llm"]
     email_cfg = config["email"]
@@ -199,7 +207,7 @@ def main() -> None:
         # 用户明确指定了日期 → 传入真实 latest_date，让路由器自动判断引擎：
         #   - target_date == latest_date → RSS 引擎（当前批次，数据完整且准确）
         #   - target_date <  latest_date → Search API 引擎（历史日期回溯）
-        papers = fetch_papers(target_date, category, latest_date=latest_date)
+        papers = fetch_papers(target_date, category, latest_date=latest_date, max_results=max_results)
 
         # RSS 在周末可能已过期（无新公告），此时对最新批次日期回退到 Search API，
         # 但需要查询的是"投稿日期"（= 公告日期的前一个工作日），而非公告日期本身。
@@ -210,7 +218,7 @@ def main() -> None:
                 f"RSS 批次为空（可能是周末），改用 Search API 查询投稿日 {submit_date}"
                 f"（公告日 {target_date}）"
             )
-            papers = fetch_papers(submit_date, category, latest_date=None)
+            papers = fetch_papers(submit_date, category, latest_date=None, max_results=max_results)
     else:
         # 自动模式 → 优先 RSS 引擎；若当日无结果（周末/节假日）则回退到历史日期
         # 回退时 target_date < latest_date，自动切换到 Search API 引擎
@@ -221,7 +229,7 @@ def main() -> None:
                     f"{query_date + timedelta(days=1)} 无论文（可能是周末或节假日），"
                     f"自动回退查询 {query_date}..."
                 )
-            papers = fetch_papers(query_date, category, latest_date=latest_date)
+            papers = fetch_papers(query_date, category, latest_date=latest_date, max_results=max_results)
             if papers:
                 if days_back > 0:
                     logger.info(f"自动回退成功，使用 {query_date} 的论文（回退了 {days_back} 天）")
