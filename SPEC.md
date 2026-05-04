@@ -38,7 +38,7 @@ A personal research tool that automatically scrapes, analyzes, and reports daily
 
 - **Markdown file**: one `.md` file per day, saved locally in an organized directory structure
 - **PDF**: generated from the Markdown file
-- **Email**: PDF attached and sent automatically to `jinminghe2047@gmail.com` via Gmail SMTP
+- **Email**: PDF attached and sent automatically to the configured recipient via SMTP
 
 Per-paper Markdown structure:
 1. Chinese title (heading)
@@ -83,10 +83,10 @@ Per-paper Markdown structure:
 
 ### Email Delivery
 
-- **Protocol**: SMTP via Gmail
-- **Sender**: `jinminghe2047@gmail.com` (uses Gmail App Password, stored in `.env`)
-- **Recipient**: `jinminghe2047@gmail.com`
-- **Attachment**: the generated PDF for that day
+- **Protocol**: SMTP (supports Gmail, Outlook, Yahoo, and custom SMTP servers)
+- **Sender**: configured via `SMTP_USERNAME` environment variable
+- **Recipient**: configured via `SMTP_RECIPIENTS` environment variable or `config.yaml`
+- **Attachment**: the generated PDF / Markdown for that day
 
 ---
 
@@ -148,7 +148,7 @@ output:
 email:
   enabled: true
   recipients:
-    - jinminghe2047@gmail.com
+    - recipient@example.com
 ```
 
 ---
