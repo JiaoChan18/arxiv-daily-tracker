@@ -3,7 +3,7 @@ arxiv:
   # 抓取论文数量上限；null = 全部抓取，不设上限
   # 设为整数（如 10）可限制每天处理的论文数量，适合测试或节省 API 调用
   # 命令行 --max-results 会覆盖此值
-  max_results: 1
+  max_results: null
 
 llm:
   model: glm-4-flash
