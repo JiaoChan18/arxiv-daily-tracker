@@ -10,7 +10,7 @@ llm:
   max_retries: 3
 
 schedule:
-  time: "07:00"
+  time: "09:00"
   timezone: "Asia/Shanghai"
 
 output:
