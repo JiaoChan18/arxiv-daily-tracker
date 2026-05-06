@@ -10,8 +10,8 @@ llm:
   max_retries: 3
 
 schedule:
-  time: "08:00"
-  timezone: "Europe/Copenhagen"
+  time: "07:00"
+  timezone: "Asia/Shanghai"
 
 output:
   directory: ./output
